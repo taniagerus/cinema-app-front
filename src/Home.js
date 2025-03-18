@@ -97,6 +97,10 @@ function Home() {
     navigate('/booking', { state: { movie } });
   };
 
+  const handleViewDetailsClick = (movie) => {
+    navigate('/details', { state: { movie } });
+  };
+
   return (
     <div className="cinema-dashboard">
       {/* Top Navigation Bar */}
@@ -263,6 +267,7 @@ function Home() {
                       className="movie-details-btn"
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
+                      onClick={() => handleViewDetailsClick(movie)}
                     >
                       View Details
                     </motion.button>

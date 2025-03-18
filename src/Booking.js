@@ -86,17 +86,18 @@ function Booking() {
   };
   
   const handleContinue = () => {
-    // Navigate to payment page or show confirmation
-    console.log('Booking details:', {
-      movie,
-      seats: selectedSeats,
-      time: selectedTime,
-      date: `${day} ${month}`,
-      totalPrice
+    // Navigate to payment page with booking details
+    navigate('/payment', { 
+      state: { 
+        bookingDetails: {
+          movie,
+          seats: selectedSeats,
+          time: selectedTime,
+          date: `${day} ${month}`,
+          totalPrice
+        }
+      } 
     });
-    
-    // For now, just go back to home
-    navigate('/');
   };
   
   const handleCancel = () => {
