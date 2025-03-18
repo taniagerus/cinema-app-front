@@ -93,6 +93,10 @@ function Home() {
     setShowUserMenu(false);
   };
 
+  const handleBookNowClick = (movie) => {
+    navigate('/booking', { state: { movie } });
+  };
+
   return (
     <div className="cinema-dashboard">
       {/* Top Navigation Bar */}
@@ -251,6 +255,7 @@ function Home() {
                       className="movie-book-btn"
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
+                      onClick={() => handleBookNowClick(movie)}
                     >
                       Book Now
                     </motion.button>
