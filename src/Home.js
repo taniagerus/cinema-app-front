@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import './Home.css';
 import { motion } from 'framer-motion';
-import { FiSearch, FiBell, FiChevronRight, FiUser } from 'react-icons/fi';
+import { FiSearch, FiBell, FiChevronRight, FiUser, FiPlus } from 'react-icons/fi';
 import { FaStar } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 
@@ -11,6 +11,9 @@ function Home() {
   const [hoveredMovie, setHoveredMovie] = useState(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const navigate = useNavigate();
+  
+  const isAdmin = localStorage.getItem('userRole') === 'admin';
+  const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
   
   // Sample movie data
   const movies = [
@@ -93,12 +96,46 @@ function Home() {
     setShowUserMenu(false);
   };
 
+  const handleLogoutClick = () => {
+    // Clear all authentication data
+    localStorage.removeItem('userRole');
+    localStorage.removeItem('isAuthenticated');
+    localStorage.removeItem('token');
+    localStorage.removeItem('userEmail');
+    
+    // Close the user menu
+    setShowUserMenu(false);
+    
+    // Reset any user-specific state
+    setHoveredMovie(null);
+    setSelectedGenres([]);
+    setActiveCategory('Popular');
+    
+    // Redirect to home page
+    navigate('/', { replace: true });
+    
+    // Optional: Reload the page to reset all states
+    window.location.reload();
+  };
+
   const handleBookNowClick = (movie) => {
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
     navigate('/booking', { state: { movie } });
   };
 
   const handleViewDetailsClick = (movie) => {
     navigate('/details', { state: { movie } });
+  };
+
+  const handleAddShowtime = () => {
+    navigate('/admin/showtime');
+  };
+
+  const handleAddMovie = () => {
+    navigate('/admin/movie');
   };
 
   return (
@@ -134,7 +171,7 @@ function Home() {
           >
             <input 
               type="text" 
-              placeholder="Search movies..." 
+              placeholder="Пошук фільмів..." 
               className="search-input"
             />
             <FiSearch className="search-icon" />
@@ -169,9 +206,20 @@ function Home() {
                 exit={{ opacity: 0, y: -10 }}
                 transition={{ duration: 0.2 }}
               >
-                <div className="dropdown-item" onClick={handleLoginClick}>
-                  Log In
-                </div>
+                {!isAuthenticated ? (
+                  <div className="dropdown-item" onClick={handleLoginClick}>
+                    Login
+                  </div>
+                ) : (
+                  <>
+                    <div className="dropdown-item user-role">
+                      {isAdmin ? 'Administrator' : 'User'}
+                    </div>
+                    <div className="dropdown-item" onClick={handleLogoutClick}>
+                      Logout
+                    </div>
+                  </>
+                )}
               </motion.div>
             )}
           </motion.div>
@@ -201,14 +249,29 @@ function Home() {
             ))}
           </div>
           
-          <motion.button 
-            className="see-all-btn"
-            whileHover={{ scale: 1.05, x: 5 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            See All
-            <FiChevronRight className="arrow-icon" />
-          </motion.button>
+          {isAdmin && (
+            <div className="admin-buttons">
+              <motion.button 
+                className="add-showtime-btn"
+                onClick={handleAddShowtime}
+                whileHover={{ scale: 1.05, x: 5 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <FiPlus className="icon" />
+                Add Showtime
+              </motion.button>
+              
+              <motion.button 
+                className="add-movie-btn"
+                onClick={handleAddMovie}
+                whileHover={{ scale: 1.05, x: 5 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <FiPlus className="icon" />
+                Add Movie
+              </motion.button>
+            </div>
+          )}
         </div>
         
         {/* Genre Filters */}
@@ -269,7 +332,7 @@ function Home() {
                       whileTap={{ scale: 0.95 }}
                       onClick={() => handleViewDetailsClick(movie)}
                     >
-                      View Details
+                      Details
                     </motion.button>
                   </motion.div>
                 )}

@@ -145,26 +145,66 @@ body {
 
 .user-dropdown {
   position: absolute;
-  top: 45px;
+  top: 100%;
   right: 0;
-  width: 150px;
   background-color: var(--background-light);
   border-radius: 8px;
+  padding: 0.5rem;
+  min-width: 150px;
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-  overflow: hidden;
   z-index: 1000;
 }
 
 .dropdown-item {
-  padding: 12px 16px;
+  padding: 0.8rem 1rem;
   color: var(--text-color);
   font-size: 0.9rem;
   cursor: pointer;
+  border-radius: 4px;
   transition: background-color var(--transition-speed);
 }
 
 .dropdown-item:hover {
   background-color: rgba(255, 255, 255, 0.1);
+}
+
+.user-role {
+  opacity: 0.7;
+  cursor: default;
+}
+
+.user-role:hover {
+  background-color: transparent;
+}
+
+.admin-buttons {
+  display: flex;
+  gap: 1rem;
+}
+
+.add-showtime-btn,
+.add-movie-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.add-showtime-btn:hover,
+.add-movie-btn:hover {
+  background-color: var(--primary-color-hover);
+}
+
+.add-showtime-btn .icon,
+.add-movie-btn .icon {
+  font-size: 1.2rem;
 }
 
 /* Main Content */
@@ -434,6 +474,17 @@ body {
   
   .main-content.no-hero {
     padding-top: 5rem;
+  }
+  
+  .admin-buttons {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .add-showtime-btn,
+  .add-movie-btn {
+    width: 100%;
+    justify-content: center;
   }
 }
 

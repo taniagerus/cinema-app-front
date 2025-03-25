@@ -11,25 +11,26 @@
 
 .auth-page {
   min-height: 100vh;
-  background-color: var(--background-dark);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  background-color: var(--background-color);
+  color: var(--text-color);
+  font-family: var(--font-family);
   padding: 2rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .auth-container {
   width: 100%;
-  max-width: 450px;
+  max-width: 500px;
+  margin: 0 auto;
 }
 
 .auth-card {
-  background-color: var(--background-light);
+  background-color: var(--secondary-background);
   border-radius: 12px;
-  padding: 2.5rem;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-  color: var(--text-color);
+  padding: 2rem;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
 }
 
 .auth-header {
@@ -40,35 +41,44 @@
 }
 
 .back-button {
+  position: absolute;
+  left: 0;
   background: none;
   border: none;
   color: var(--text-color);
-  font-size: 1.2rem;
+  font-size: 1.5rem;
   cursor: pointer;
   padding: 0.5rem;
-  margin-right: 1rem;
-  opacity: 0.7;
-  transition: opacity var(--transition-speed);
-  position: absolute;
-  left: -0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease;
 }
 
 .back-button:hover {
-  opacity: 1;
+  transform: scale(1.1);
 }
 
 .auth-title {
+  width: 100%;
+  text-align: center;
   font-size: 1.8rem;
-  font-weight: 700;
-  margin: 0 auto;
-  letter-spacing: -0.5px;
+  margin: 0;
 }
 
 .auth-form {
   display: flex;
   flex-direction: column;
-  gap: 1.2rem;
-  margin-bottom: 1.5rem;
+  gap: 1rem;
+}
+
+.form-row {
+  display: flex;
+  gap: 1rem;
+}
+
+.form-row .input-group {
+  flex: 1;
 }
 
 .input-group {
@@ -80,13 +90,177 @@
   left: 1rem;
   top: 50%;
   transform: translateY(-50%);
-  color: rgba(255, 255, 255, 0.5);
-  font-size: 1.1rem;
+  color: var(--text-color);
+  opacity: 0.7;
 }
 
 .auth-input {
   width: 100%;
-  padding: 1rem 1rem 1rem 3rem;
+  padding: 0.8rem 1rem 0.8rem 3rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  background-color: rgba(255, 255, 255, 0.05);
+  color: var(--text-color);
+  font-size: 1rem;
+  transition: all 0.3s ease;
+}
+
+.auth-input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.auth-input::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.admin-toggle {
+  margin: 1rem 0;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 1.2rem;
+  height: 1.2rem;
+  cursor: pointer;
+}
+
+.auth-button {
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  padding: 1rem;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-top: 1rem;
+}
+
+.auth-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.auth-button:not(:disabled):hover {
+  background-color: var(--primary-color-hover);
+  transform: translateY(-2px);
+}
+
+.error-message {
+  color: #ff6b6b;
+  background-color: rgba(255, 107, 107, 0.1);
+  padding: 0.8rem;
+  border-radius: 8px;
+  margin-top: 1rem;
+  text-align: center;
+}
+
+.auth-footer {
+  margin-top: 2rem;
+  text-align: center;
+}
+
+.auth-link {
+  color: var(--primary-color);
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 0.3s ease;
+}
+
+.auth-link:hover {
+  color: var(--primary-color-hover);
+}
+
+@media (max-width: 600px) {
+  .auth-page {
+    padding: 1rem;
+  }
+
+  .auth-card {
+    padding: 1.5rem;
+  }
+
+  .form-row {
+    flex-direction: column;
+  }
+
+  .auth-title {
+    font-size: 1.5rem;
+  }
+
+  .auth-input {
+    font-size: 0.9rem;
+  }
+}
+
+.register-page {
+  min-height: 100vh;
+  background-color: var(--background-dark);
+  color: var(--text-color);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  padding: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.register-container {
+  width: 100%;
+  max-width: 400px;
+  background-color: var(--background-light);
+  border-radius: 12px;
+  padding: 2rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.register-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.register-header h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  margin: 0;
+  letter-spacing: -0.5px;
+}
+
+.register-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.input-icon {
+  color: var(--primary-color);
+}
+
+input {
+  width: 100%;
+  padding: 0.8rem 1rem;
   background-color: rgba(255, 255, 255, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
@@ -95,58 +269,108 @@
   transition: all var(--transition-speed);
 }
 
-.auth-input:focus {
+input:focus {
   outline: none;
   border-color: rgba(255, 255, 255, 0.3);
   background-color: rgba(255, 255, 255, 0.15);
 }
 
-.date-input {
-  color-scheme: dark;
+.admin-toggle {
+  margin: 0.5rem 0;
 }
 
-.auth-button {
-  margin-top: 0.5rem;
-  padding: 1rem;
-  background-color: var(--primary-color);
-  color: var(--text-color);
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: auto;
+  margin: 0;
+  cursor: pointer;
+}
+
+.error-message {
+  color: var(--primary-color);
+  font-size: 0.9rem;
+  margin-top: -0.5rem;
+}
+
+.form-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.cancel-button, .register-button {
+  flex: 1;
+  padding: 0.8rem;
   border: none;
   border-radius: 8px;
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
-  transition: background-color var(--transition-speed);
+  transition: all var(--transition-speed);
 }
 
-.auth-button:hover {
+.cancel-button {
+  background-color: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: var(--text-color);
+}
+
+.cancel-button:hover {
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.register-button {
+  background-color: var(--primary-color);
+  color: var(--text-color);
+}
+
+.register-button:hover {
   background-color: #f40612;
 }
 
-.auth-footer {
+.login-link {
   text-align: center;
+  margin-top: 1rem;
   font-size: 0.9rem;
   color: rgba(255, 255, 255, 0.7);
 }
 
-.auth-link {
+.login-link a {
   color: var(--primary-color);
   text-decoration: none;
-  font-weight: 500;
-  transition: color var(--transition-speed);
+  cursor: pointer;
 }
 
-.auth-link:hover {
-  color: #f40612;
+.login-link a:hover {
   text-decoration: underline;
 }
 
 /* Media Queries */
-@media (max-width: 576px) {
-  .auth-card {
-    padding: 2rem 1.5rem;
+@media (max-width: 768px) {
+  .register-page {
+    padding: 1rem;
   }
   
-  .auth-title {
+  .register-container {
+    padding: 1.5rem;
+  }
+  
+  .register-header h1 {
     font-size: 1.5rem;
+  }
+  
+  .form-actions {
+    flex-direction: column;
+  }
+  
+  .cancel-button, .register-button {
+    width: 100%;
   }
 }
