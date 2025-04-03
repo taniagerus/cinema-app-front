@@ -6,6 +6,21 @@ import './Login.css';
 
 const API_URL = 'http://localhost:5252';
 
+// Функція для розбору JWT токена
+const parseJwt = (token) => {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+      return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+    }).join(''));
+    return JSON.parse(jsonPayload);
+  } catch (error) {
+    console.error('Error parsing JWT:', error);
+    return null;
+  }
+};
+
 function Login() {
   const [formData, setFormData] = useState({
     email: '',
@@ -29,9 +44,8 @@ function Login() {
     setIsLoading(true);
 
     try {
-      console.log('Attempting login with data:', { username: formData.username });
+      console.log('Attempting login with data:', { email: formData.email });
 
-      // Виконання запиту на сервер для авторизації
       const response = await fetch(`${API_URL}/api/users/login`, {
         method: 'POST',
         headers: {
@@ -48,48 +62,45 @@ function Login() {
         throw new Error(errorData.message || 'Помилка авторизації');
       }
 
-      // Отримання даних користувача і токена
       const userData = await response.json();
       console.log('Login successful, received data:', JSON.stringify(userData, null, 2));
 
-      // Перевірка наявності токена і встановлення у правильному форматі
       if (!userData.token) {
         throw new Error('Authorization token was not received');
       }
 
-      // Зберігаємо токен без префіксу "Bearer " - ми додамо його при виконанні запитів
-      // Це важливо для роботи з ASP.NET Core, який очікує формат "Bearer {token}"
-      // Якщо токен вже містить "Bearer ", видаляємо цей префікс
       let cleanToken = userData.token;
       if (cleanToken.startsWith('Bearer ')) {
         cleanToken = cleanToken.substring(7);
       }
-      console.log('Token saved (first 15 chars):', cleanToken.substring(0, 15) + '...');
 
-      // Перетворюємо роль на нижній регістр для консистентності в клієнтській перевірці,
-      // але зберігаємо оригінальний регістр для відправки на сервер
+      // Розбираємо JWT токен для отримання правильного userId
+      const decodedToken = parseJwt(cleanToken);
+      console.log('Decoded token:', decodedToken);
+
+      // Отримуємо правильний userId з поля nameidentifier
+      const userId = decodedToken['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'];
+      console.log('Using userId from token:', userId);
+
       const userRole = userData.role ? userData.role.toLowerCase() : 'user';
       const originalRole = userData.role || 'user';
-      console.log('User role (original):', originalRole);
-      console.log('User role (converted to lowercase for client checks):', userRole);
 
       // Зберігаємо дані користувача в localStorage
-      localStorage.setItem('token', cleanToken); // Токен без "Bearer " префіксу
-      localStorage.setItem('originalRole', originalRole); // Оригінальний регістр ролі
-      localStorage.setItem('userName', userData.userName || formData.username);
-      localStorage.setItem('userRole', userRole); // Роль в нижньому регістрі для клієнтських перевірок
+      localStorage.setItem('token', cleanToken);
+      localStorage.setItem('originalRole', originalRole);
+      localStorage.setItem('userName', userData.userName || formData.email);
+      localStorage.setItem('userRole', userRole);
       localStorage.setItem('isAuthenticated', 'true');
+      localStorage.setItem('userId', userId); // Зберігаємо правильний userId
       
       console.log('User data saved to localStorage, redirecting based on role');
 
-      // Навігація на основі ролі користувача
       if (userRole === 'admin') {
         navigate('/admin');
       } else {
         navigate('/');
       }
 
-      // Перезавантаження сторінки для оновлення всіх станів
       window.location.reload();
     } catch (error) {
       console.error('Login error:', error);

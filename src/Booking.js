@@ -52,7 +52,7 @@ function Booking() {
     };
     
     checkAuth();
-  }, []);
+  }, [movie, selectedSeats, selectedTime, totalPrice, navigate]);
 
   // Fetch hall data and seats when showtime is selected
   useEffect(() => {
@@ -98,7 +98,7 @@ function Booking() {
     };
 
     fetchHallData();
-  }, [selectedTime]);
+  }, [selectedTime, API_URL]);
 
   // Fetch showtimes
   useEffect(() => {
@@ -145,7 +145,7 @@ function Booking() {
     };
     
     fetchShowtimes();
-  }, [movie, selectedShowtime]);
+  }, [movie, selectedShowtime, API_URL]);
 
   // Extract unique dates
   useEffect(() => {
@@ -199,7 +199,7 @@ function Booking() {
     };
 
     fetchReservations();
-  }, [selectedTime]);
+  }, [selectedTime, API_URL, navigate]);
 
   // Update seat availability based on reservations
   useEffect(() => {
@@ -286,8 +286,13 @@ function Booking() {
       const token = localStorage.getItem('token');
       const userId = localStorage.getItem('userId');
 
+      console.log('Starting reservation process...');
+      console.log('User ID from localStorage:', userId);
+      console.log('Selected seats:', selectedSeats);
+      console.log('Selected showtime:', selectedTime);
+
       if (!userId) {
-        throw new Error('User ID not found');
+        throw new Error('User ID not found. Please login again.');
       }
 
       let authToken = token?.trim();
@@ -295,34 +300,40 @@ function Booking() {
         authToken = `Bearer ${authToken}`;
       }
 
+      console.log('Creating reservation with userId:', userId);
+
       // Create reservations for all selected seats
-      const reservationPromises = selectedSeats.map(seat =>
-        fetch(`${API_URL}/api/reserve`, {
+      const reservationPromises = selectedSeats.map(seat => {
+        const reservationData = {
+          showtimeId: selectedTime.id,
+          userId: userId,
+          seatId: seat.id
+        };
+        console.log('Creating reservation with data:', reservationData);
+        
+        return fetch(`${API_URL}/api/reserve`, {
           method: 'POST',
           headers: {
             'Authorization': authToken,
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({
-            showtimeId: selectedTime.id,
-            userId: userId,
-            seatId: seat.id
-          })
-        })
-      );
+          body: JSON.stringify(reservationData)
+        });
+      });
 
       const results = await Promise.all(reservationPromises);
       
       // Check for failed reservations
       const failedReservations = results.filter(r => !r.ok);
       if (failedReservations.length > 0) {
-        const errorResponse = await failedReservations[0].json().catch(() => ({
-          error: 'Failed to parse error response'
-        }));
+        const errorResponse = await failedReservations[0].json();
+        console.error('Reservation failed:', errorResponse);
         
         if (failedReservations[0].status === 401) {
+          console.log('Authentication error, clearing user data...');
           localStorage.removeItem('token');
           localStorage.removeItem('isAuthenticated');
+          localStorage.removeItem('userId');
           localStorage.setItem('bookingState', JSON.stringify({
             movie,
             selectedSeats,
@@ -334,17 +345,37 @@ function Booking() {
           navigate('/login', { state: { from: '/booking' } });
           return;
         }
-        throw new Error(errorResponse.error || 'Failed to reserve some seats');
+        throw new Error(errorResponse.error || errorResponse.message || 'Failed to reserve some seats');
       }
 
-      // If all reservations are successful, navigate to payment
+      console.log('All reservations successful, navigating to payment...');
+
+      // Calculate total price including booking fee
+      const bookingFee = 1.50;
+      const totalPriceWithFee = totalPrice + bookingFee;
+
+      // If all reservations are successful, navigate to payment with complete booking details
       navigate('/payment', { 
         state: { 
           bookingDetails: {
-            movie,
-            seats: selectedSeats,
-            showtime: selectedTime,
-            totalPrice
+            movie: {
+              ...movie,
+              image: movie.image // Ensure image path is included
+            },
+            seats: selectedSeats.map(seat => ({
+              id: seat.id,
+              rowNumber: seat.rowNumber,
+              seatNumber: seat.seatNumber
+            })),
+            showtime: {
+              id: selectedTime.id,
+              startTime: selectedTime.startTime,
+              price: selectedTime.price
+            },
+            totalPrice: totalPrice,
+            bookingFee: bookingFee,
+            finalTotal: totalPriceWithFee,
+            reservationTime: new Date().toISOString()
           }
         } 
       });
