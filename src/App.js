@@ -10,6 +10,8 @@ import AdminShowtime from './AdminShowtime';
 import AdminMovie from './AdminMovie';
 import AdminDashboard from './AdminDashboard';
 import EditShowtime from './EditShowtime';
+import EditMovie from './EditMovie';
+import AdminHall from './AdminHall';
 
 function App() {
   return (
@@ -25,7 +27,9 @@ function App() {
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/admin/showtime" element={<AdminShowtime />} />
           <Route path="/admin/movie" element={<AdminMovie />} />
+          <Route path="/admin/hall" element={<AdminHall />} />
           <Route path="/admin/showtime/edit/:id" element={<EditShowtime />} />
+          <Route path="/admin/movie/edit/:id" element={<EditMovie />} />
         </Routes>
       </div>
     </Router>

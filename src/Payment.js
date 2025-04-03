@@ -1,22 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { FiArrowLeft, FiCreditCard, FiUser, FiCalendar, FiLock, FiCheck } from 'react-icons/fi';
 import { useNavigate, useLocation } from 'react-router-dom';
 import './Payment.css';
 
+const API_URL = localStorage.getItem('apiUrl') || 'http://localhost:5252';
+
 function Payment() {
   const navigate = useNavigate();
   const location = useLocation();
-  const bookingDetails = location.state?.bookingDetails || {
-    movie: {
-      title: 'Dune: Part Two',
-      poster: 'https://image.tmdb.org/t/p/w500/8b8R8l88Qje9dn9OE8PY05Nxl1X.jpg'
-    },
-    seats: [{ id: '1-1', row: 1, seat: 1, price: 15 }],
-    time: '19:40',
-    date: '24 JUN',
-    totalPrice: 15
-  };
+  const bookingDetails = location.state?.bookingDetails;
 
   const [cardName, setCardName] = useState('');
   const [cardNumber, setCardNumber] = useState('');
@@ -26,18 +19,24 @@ function Payment() {
   const [isPaymentComplete, setIsPaymentComplete] = useState(false);
   const [errors, setErrors] = useState({});
 
+  useEffect(() => {
+    if (!bookingDetails) {
+      navigate('/');
+    }
+  }, [bookingDetails, navigate]);
+
+  if (!bookingDetails) {
+    return null;
+  }
+
   const formatCardNumber = (value) => {
-    // Remove all non-digits
     const digits = value.replace(/\D/g, '');
-    // Add space after every 4 digits
     const formatted = digits.replace(/(\d{4})(?=\d)/g, '$1 ');
-    return formatted.substring(0, 19); // Limit to 16 digits + 3 spaces
+    return formatted.substring(0, 19);
   };
 
   const formatExpiry = (value) => {
-    // Remove all non-digits
     const digits = value.replace(/\D/g, '');
-    // Format as MM/YY
     if (digits.length > 2) {
       return `${digits.substring(0, 2)}/${digits.substring(2, 4)}`;
     }
@@ -53,7 +52,6 @@ function Payment() {
   };
 
   const handleCVCChange = (e) => {
-    // Only allow digits and limit to 3-4 characters
     const cvc = e.target.value.replace(/\D/g, '').substring(0, 4);
     setCardCVC(cvc);
   };
@@ -95,12 +93,10 @@ function Payment() {
     
     setIsProcessing(true);
     
-    // Simulate payment processing
     setTimeout(() => {
       setIsProcessing(false);
       setIsPaymentComplete(true);
       
-      // Redirect to confirmation after 2 seconds
       setTimeout(() => {
         navigate('/confirmation', { 
           state: { 
@@ -117,6 +113,27 @@ function Payment() {
 
   const handleBack = () => {
     navigate(-1);
+  };
+
+  const formatSeats = (seats) => {
+    return seats.map(seat => `Row ${seat.rowNumber}, Seat ${seat.seatNumber}`).join(', ');
+  };
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      weekday: 'short',
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
+  const formatTime = (dateString) => {
+    return new Date(dateString).toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
   };
 
   return (
@@ -151,17 +168,22 @@ function Payment() {
               <h3>Order Summary</h3>
               <div className="movie-summary">
                 <img 
-                  src={bookingDetails.movie.poster} 
+                  src={`${API_URL}${bookingDetails.movie.image}`} 
                   alt={bookingDetails.movie.title} 
-                  className="movie-thumbnail" 
+                  className="movie-thumbnail"
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src = '/placeholder-movie.jpg';
+                  }}
                 />
                 <div className="movie-details">
                   <h4>{bookingDetails.movie.title}</h4>
-                  <p>Date: {bookingDetails.date}</p>
-                  <p>Time: {bookingDetails.time}</p>
-                  <p>Seats: {bookingDetails.seats.map(seat => `R${seat.row}-S${seat.seat}`).join(', ')}</p>
+                  <p>Date: {formatDate(bookingDetails.showtime.startTime)}</p>
+                  <p>Time: {formatTime(bookingDetails.showtime.startTime)}</p>
+                  <p>Seats: {formatSeats(bookingDetails.seats)}</p>
                 </div>
               </div>
+              
               <div className="price-summary">
                 <div className="price-item">
                   <span>Tickets ({bookingDetails.seats.length})</span>

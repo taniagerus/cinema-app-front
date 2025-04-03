@@ -98,140 +98,74 @@ function AdminMovie() {
     e.preventDefault();
     setError('');
     setSuccess('');
-    setUploadProgress('Preparing data...');
     setIsLoading(true);
 
+    // Валідація даних
+    if (formData.title.trim().length < 2 || formData.title.trim().length > 100) {
+      setError('Назва фільму повинна бути від 2 до 100 символів');
+      setIsLoading(false);
+      return;
+    }
+
+    if (formData.description.trim().length < 10 || formData.description.trim().length > 1000) {
+      setError('Опис фільму повинен бути від 10 до 1000 символів');
+      setIsLoading(false);
+      return;
+    }
+
+    const duration = parseInt(formData.durationInMinutes);
+    if (isNaN(duration) || duration < 1 || duration > 1000) {
+      setError('Тривалість фільму повинна бути від 1 до 1000 хвилин');
+      setIsLoading(false);
+      return;
+    }
+
+    if (!formData.poster) {
+      setError('Будь ласка, виберіть зображення для фільму');
+      setIsLoading(false);
+      return;
+    }
+
     try {
-      // Перевірка авторизації
       const token = localStorage.getItem('token');
       if (!token) {
-        throw new Error('Authorization required to add a movie');
+        throw new Error('Authorization required');
       }
 
-      // Базова перевірка даних
-      if (!formData.title || !formData.genre || !formData.durationInMinutes || !formData.poster) {
-        setError('Please fill in all required fields');
-        setIsLoading(false);
-        setUploadProgress('');
-        return;
+      let authToken = token.trim();
+      if (!authToken.startsWith('Bearer ')) {
+        authToken = `Bearer ${authToken}`;
       }
 
-      setUploadProgress('Preparing file for upload...');
-      
-      // Створення FormData для відправки файлу
-      const movieData = new FormData();
-      
-      // Додавання всіх полів згідно з MovieDto
-      movieData.append('title', formData.title);
-      movieData.append('genre', formData.genre);
-      movieData.append('description', formData.description);
-      movieData.append('ageRating', formData.ageRating);
-      movieData.append('durationInMinutes', formData.durationInMinutes);
-      movieData.append('director', formData.director);
-      movieData.append('language', formData.language);
-      
-      // Додаємо тимчасовий шлях для поля Image
-      const tempImagePath = `/images/movies/temp_${Date.now()}.jpg`;
-      movieData.append('image', tempImagePath);
-      
-      // Додавання постера як imageFile згідно з контролером
-      if (formData.poster) {
-        movieData.append('imageFile', formData.poster);
-      }
-      
-      // Виведемо всі поля для дебагу
-      console.log('FormData fields:');
-      for (let [key, value] of movieData.entries()) {
-        console.log(`${key}: ${value instanceof File ? `[File: ${value.name}]` : value}`);
-      }
-      
-      setUploadProgress('Sending data to server...');
-      
-      // ВАЖЛИВО: Правильний формат Bearer-токена для .NET
-      let authToken = token;
-      if (!token.startsWith('Bearer ')) {
-        authToken = `Bearer ${token}`;
-      }
-      
-      console.log('API endpoint:', `${API_URL}/api/movies`);
-      console.log('Using authorization token format:', authToken.substring(0, 15) + '...');
-      
+      const formData = new FormData();
+      formData.append('title', formData.title.trim());
+      formData.append('description', formData.description.trim());
+      formData.append('durationInMinutes', duration.toString());
+      formData.append('imageFile', formData.poster);
+
       const response = await fetch(`${API_URL}/api/movies`, {
         method: 'POST',
         headers: {
           'Authorization': authToken
-          // НЕ встановлюємо 'Content-Type' для FormData з файлами
         },
-        body: movieData
+        body: formData
       });
-      
-      console.log('Response status:', response.status);
-      
+
       if (!response.ok) {
-        let errorMessage = `Server error: ${response.status}`;
-        
-        try {
-          const errorData = await response.json();
-          console.error('Error details:', errorData);
-          
-          // Обробка помилок валідації
-          if (errorData.errors) {
-            const validationErrors = Object.entries(errorData.errors)
-              .map(([field, messages]) => `${field}: ${messages.join(', ')}`)
-              .join('\n');
-            errorMessage = `Validation errors:\n${validationErrors}`;
-          } else {
-            errorMessage = errorData.error || errorData.title || errorData.message || errorMessage;
-          }
-          
-          // Для помилки 401 (Unauthorized)
-          if (response.status === 401) {
-            console.log('Authorization error detected');
-            errorMessage = 'You do not have permission to add movies. Please login as an admin user.';
-          }
-        } catch (e) {
-          try {
-            const textError = await response.text();
-            console.error('Error response text:', textError);
-            if (textError) errorMessage = textError;
-          } catch (textError) {
-            console.error('Failed to get error text:', textError);
-          }
-        }
-        
-        throw new Error(errorMessage);
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to create movie');
       }
+
+      setSuccess('Movie created successfully!');
       
-      // Успішне додавання фільму
-      const result = await response.json();
-      console.log('Movie added successfully:', result);
-      
-      setSuccess('Movie added successfully!');
-      setIsLoading(false);
-      setUploadProgress('');
-      
-      // Очищення форми
-      setFormData({
-        title: '',
-        genre: '',
-        description: '',
-        ageRating: '',
-        durationInMinutes: '',
-        director: '',
-        language: 'English',
-        poster: null,
-        posterPreview: null
-      });
-      
-      // Перенаправлення на сторінку адміністратора
       setTimeout(() => {
         navigate('/admin');
       }, 2000);
     } catch (error) {
-      console.error('Error adding movie:', error);
-      setError(error.message || 'Error adding movie. Please try again later.');
+      console.error('Error creating movie:', error);
+      setError(error.message || 'Error creating movie');
+    } finally {
       setIsLoading(false);
-      setUploadProgress('');
     }
   };
 

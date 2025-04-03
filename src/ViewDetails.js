@@ -1,8 +1,10 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { FiArrowLeft, FiClock, FiCalendar, FiStar } from 'react-icons/fi';
+import { FiArrowLeft, FiClock, FiCalendar, FiUser, FiGlobe } from 'react-icons/fi';
 import { useLocation, useNavigate } from 'react-router-dom';
 import './ViewDetails.css';
+
+const API_URL = 'http://localhost:5252';
 
 function ViewDetails() {
   const location = useLocation();
@@ -50,7 +52,15 @@ function ViewDetails() {
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.5, delay: 0.2 }}
         >
-          <img src={movie.poster} alt={movie.title} className="details-poster" />
+          <img 
+            src={`${API_URL}${movie.image}`} 
+            alt={movie.title} 
+            className="details-poster"
+            onError={(e) => {
+              e.target.onerror = null;
+              e.target.src = '/placeholder-movie.jpg';
+            }}
+          />
         </motion.div>
 
         <motion.div 
@@ -63,33 +73,35 @@ function ViewDetails() {
           
           <div className="movie-meta">
             <div className="meta-item">
-              <FiStar className="meta-icon" />
-              <span>{movie.rating}</span>
+              <FiUser className="meta-icon" />
+              <span>{movie.ageRating}+</span>
             </div>
             <div className="meta-item">
               <FiClock className="meta-icon" />
-              <span>{movie.duration}</span>
+              <span>{movie.durationInMinutes} min</span>
             </div>
             <div className="meta-item">
-              <FiCalendar className="meta-icon" />
-              <span>{movie.year}</span>
+              <FiGlobe className="meta-icon" />
+              <span>{movie.language}</span>
             </div>
           </div>
 
           <div className="movie-genres">
-            {movie.genres && movie.genres.map((genre, index) => (
-              <span key={index} className="genre-tag">{genre}</span>
+            {movie.genre && movie.genre.split(',').map((genre, index) => (
+              <span key={index} className="genre-tag">{genre.trim()}</span>
             ))}
           </div>
 
           <div className="movie-description">
             <h3>Synopsis</h3>
-            <p>
-              {movie.description || 
-                `${movie.title} is a ${movie.genres && movie.genres.join('/')} movie released in ${movie.year}. 
-                This captivating film offers an unforgettable cinematic experience with stunning visuals and 
-                compelling performances.`}
-            </p>
+            <p>{movie.description}</p>
+          </div>
+
+          <div className="movie-additional-info">
+            <div className="info-row">
+              <span className="info-label">Director:</span>
+              <span className="info-value">{movie.director}</span>
+            </div>
           </div>
 
           <motion.button 

@@ -1,27 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { FiArrowLeft, FiCalendar, FiClock, FiMonitor, FiHome } from 'react-icons/fi';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import './AdminShowtime.css';
 
 const API_URL = 'http://localhost:5252';
 
 function AdminShowtime() {
   const navigate = useNavigate();
-
-  // Перевірка прав доступу при завантаженні компонента
-  useEffect(() => {
-    const userRole = localStorage.getItem('userRole')?.toLowerCase();
-    const isAuthenticated = localStorage.getItem('isAuthenticated');
-    const token = localStorage.getItem('token');
-    
-    console.log('AdminShowtime Auth check - Role:', userRole, 'Auth status:', isAuthenticated, 'Token exists:', !!token);
-    
-    if (!isAuthenticated || !token || userRole !== 'admin') {
-      console.log('Authentication failed in AdminShowtime, redirecting to login');
-      navigate('/login');
-    }
-  }, [navigate]);
+  const location = useLocation();
+  
+  // Додаємо ref для контролю станів
+  const isMounted = useRef(true);
+  const isNavigatingRef = useRef(false);
 
   const [selectedMovie, setSelectedMovie] = useState('');
   const [selectedHall, setSelectedHall] = useState('');
@@ -37,37 +28,87 @@ function AdminShowtime() {
   const [isLoadingHalls, setIsLoadingHalls] = useState(true);
   const [endTime, setEndTime] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [dataRefreshNeeded, setDataRefreshNeeded] = useState(true);
+
+  // Функція для безпечної навігації
+  const safeNavigate = (path) => {
+    if (isNavigatingRef.current) {
+      console.log('Navigation already in progress, ignoring navigation request');
+      return;
+    }
+    
+    console.log(`Safely navigating to: ${path}`);
+    isNavigatingRef.current = true;
+    navigate(path);
+  };
+
+  // Перевірка прав доступу при завантаженні компонента
+  useEffect(() => {
+    isMounted.current = true;
+    
+    const userRole = localStorage.getItem('userRole')?.toLowerCase();
+    const isAuthenticated = localStorage.getItem('isAuthenticated');
+    const token = localStorage.getItem('token');
+    
+    console.log('AdminShowtime Auth check - Role:', userRole, 'Auth status:', isAuthenticated, 'Token exists:', !!token);
+    
+    if (!isAuthenticated || !token || userRole !== 'admin') {
+      console.log('Authentication failed in AdminShowtime, redirecting to login');
+      safeNavigate('/login');
+    }
+    
+    return () => {
+      isMounted.current = false;
+    };
+  }, [navigate]);
 
   // Завантаження списку фільмів з сервера
   useEffect(() => {
     const fetchMovies = async () => {
+      if (!dataRefreshNeeded) return;
+      
       try {
         console.log('Fetching movies list...');
+        setIsLoadingMovies(true);
+        
         const response = await fetch(`${API_URL}/api/movies`);
         console.log('Movies API response status:', response.status);
         
         if (!response.ok) {
-          throw new Error('Failed to load movie list');
+          throw new Error(`Failed to load movie list: ${response.status} ${response.statusText}`);
         }
         const data = await response.json();
         console.log(`Loaded ${data.length} movies from API`);
         setMovies(data);
       } catch (error) {
         console.error('Error loading movies:', error);
-        setError('Failed to load movies. Please try again later.');
+        setError(`Failed to load movies: ${error.message}`);
       } finally {
         setIsLoadingMovies(false);
+        setDataRefreshNeeded(false);
       }
     };
 
     fetchMovies();
-  }, []);
+  }, [dataRefreshNeeded]);
+
+  // Оновлення даних при поверненні на сторінку
+  useEffect(() => {
+    if (location.pathname === '/admin/showtime') {
+      console.log('AdminShowtime: detected return to page, refreshing data');
+      setDataRefreshNeeded(true);
+    }
+  }, [location.pathname]);
 
   // Завантаження списку залів
   useEffect(() => {
     const fetchHalls = async () => {
+      if (!dataRefreshNeeded) return;
+      
       try {
         console.log('Починаємо завантаження списку залів...');
+        setIsLoadingHalls(true);
+        
         const token = localStorage.getItem('token');
         if (!token) {
           throw new Error('Необхідна авторизація для отримання списку залів');
@@ -88,8 +129,15 @@ function AdminShowtime() {
         console.log('Відповідь від API залів, статус:', response.status);
         
         if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || 'Помилка завантаження списку залів');
+          const errorText = await response.text();
+          console.error('Error response:', errorText);
+          
+          try {
+            const errorData = JSON.parse(errorText);
+            throw new Error(errorData.message || errorData.title || 'Помилка завантаження списку залів');
+          } catch (jsonError) {
+            throw new Error(`API error ${response.status}: ${errorText || 'Помилка завантаження списку залів'}`);
+          }
         }
 
         const data = await response.json();
@@ -104,14 +152,14 @@ function AdminShowtime() {
         console.log(`Успішно завантажено ${data.length} залів`);
       } catch (error) {
         console.error('Помилка при завантаженні залів:', error);
-        setError('Помилка завантаження списку залів. Спробуйте пізніше.');
+        setError(`Помилка завантаження списку залів: ${error.message}`);
       } finally {
         setIsLoadingHalls(false);
       }
     };
 
     fetchHalls();
-  }, []);
+  }, [dataRefreshNeeded]);
 
   // Розрахунок часу завершення сеансу
   const calculateEndDateTime = (date, time, movieId) => {
@@ -146,6 +194,13 @@ function AdminShowtime() {
   // Функція для створення нового сеансу
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Запобігаємо повторній відправці форми
+    if (isNavigatingRef.current) {
+      console.log('Navigation already in progress, ignoring submit');
+      return;
+    }
+    
     setError('');
     setSuccess('');
     setIsLoading(true);
@@ -193,14 +248,21 @@ function AdminShowtime() {
       });
       
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to create showtime');
+        const errorText = await response.text();
+        console.error('Error response:', errorText);
+        
+        try {
+          const errorData = JSON.parse(errorText);
+          throw new Error(errorData.message || errorData.title || 'Failed to create showtime');
+        } catch (jsonError) {
+          throw new Error(`API error ${response.status}: ${errorText || 'Failed to create showtime'}`);
+        }
       }
       
       const result = await response.json();
-      console.log('Showtime added successfully:', result);
+      console.log('Showtime created successfully:', result);
       
-      setSuccess('Showtime added successfully!');
+      setSuccess('Showtime created successfully!');
       
       // Очищаємо форму
       setSelectedMovie('');
@@ -209,19 +271,27 @@ function AdminShowtime() {
       setSelectedTime('');
       setPrice('15.00');
       
+      // Позначаємо, що розпочинається навігація
+      isNavigatingRef.current = true;
+      
+      // Перенаправляємо на сторінку адміністратора
       setTimeout(() => {
-        navigate('/admin');
+        if (isMounted.current) {
+          navigate('/admin?tab=showtimes');
+        }
       }, 2000);
     } catch (error) {
       console.error('Error creating showtime:', error);
-      setError(error.message || 'Error creating showtime. Please try again later.');
+      setError(`Error creating showtime: ${error.message}`);
     } finally {
-      setIsLoading(false);
+      if (isMounted.current) {
+        setIsLoading(false);
+      }
     }
   };
 
   const handleCancel = () => {
-    navigate('/admin');
+    safeNavigate('/admin?tab=showtimes');
   };
 
   return (
@@ -459,7 +529,7 @@ function AdminShowtime() {
               className="submit-button"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              disabled={isLoading}
+              disabled={isLoading || isNavigatingRef.current}
             >
               {isLoading ? 'SAVING...' : 'SAVE'}
             </motion.button>
