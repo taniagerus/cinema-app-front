@@ -286,6 +286,16 @@ button:disabled {
   font-size: 1rem;
 }
 
+.payment-error {
+  background-color: rgba(255, 0, 0, 0.1);
+  border: 1px solid rgba(255, 0, 0, 0.3);
+  color: #ff0000;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  border-radius: 8px;
+  text-align: center;
+}
+
 /* Media Queries */
 @media (max-width: 768px) {
   .payment-container {

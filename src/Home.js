@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './Home.css';
 import { motion } from 'framer-motion';
 import { FiSearch, FiBell, FiChevronRight, FiUser, FiPlus, FiClock, FiCalendar, FiFilter } from 'react-icons/fi';
-import { FaStar } from 'react-icons/fa';
+import { FaStar, FaClock, FaGlobe } from 'react-icons/fa';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 const API_URL = 'http://localhost:5252';
@@ -331,6 +331,39 @@ function Home() {
     }
   })();
 
+  const MovieCard = ({ movie }) => {
+    return (
+      <div className="movie-card">
+        <div className="movie-poster">
+          <img src={movie.posterUrl} alt={movie.title} />
+          <div className={`movie-rating age-${movie.ageRating}`}>
+            {movie.ageRating}
+          </div>
+        </div>
+        <div className="movie-info">
+          <h3 className="movie-title">{movie.title}</h3>
+          <div className="movie-meta-info">
+            <div className="meta-item">
+              <FaClock className="icon" />
+              {movie.duration} min
+            </div>
+            <div className="meta-item">
+              <FaGlobe className="icon" />
+              <span className="language-tag">{movie.language}</span>
+            </div>
+          </div>
+          <div className="movie-genres-list">
+            {movie.genres.map((genre, index) => (
+              <span key={index} className="movie-genre-tag">
+                {genre}
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="cinema-dashboard">
       {/* Top Navigation Bar */}
@@ -366,7 +399,7 @@ function Home() {
               type="text" 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Пошук фільмів..." 
+              placeholder="Search movies..." 
               className="search-input"
             />
             <FiSearch className="search-icon" />
@@ -596,8 +629,8 @@ function Home() {
                       e.target.src = '/placeholder-movie.jpg';
                     }}
                   />
-                  <div className="movie-rating">
-                    {movie.ageRating}+
+                  <div className={`movie-rating age-${movie.ageRating}`}>
+                    {movie.ageRating}
                   </div>
                   
                   {hoveredMovie === movie.id && (
@@ -610,7 +643,7 @@ function Home() {
                       {/* Відображаємо доступні сеанси, якщо є фільтри за датою/часом */}
                       {(selectedDate || selectedTimeRange) && showtimes.length > 0 && (
                         <div className="available-showtimes">
-                          <h4>Доступні сеанси:</h4>
+                          <h4>Available Showtimes:</h4>
                           <div className="showtime-list">
                             {showtimes
                               .filter(showtime => showtime.movieId === movie.id)
@@ -634,7 +667,7 @@ function Home() {
                               ))}
                             {showtimes.filter(showtime => showtime.movieId === movie.id).length > 3 && (
                               <div className="more-showtimes">
-                                + ще {showtimes.filter(showtime => showtime.movieId === movie.id).length - 3} сеансів
+                                + {showtimes.filter(showtime => showtime.movieId === movie.id).length - 3} more showtimes
                               </div>
                             )}
                           </div>
@@ -663,16 +696,19 @@ function Home() {
                 <div className="movie-info">
                   <h3 className="movie-title">{movie.title}</h3>
                   <div className="movie-meta-info">
-                    <span className="movie-duration">
-                      <FiClock className="icon" />
-                      {movie.durationInMinutes} min
-                    </span>
-                    <span className="movie-language">{movie.language}</span>
+                    <div className="meta-item">
+                      <FaClock className="icon" />
+                      <span>{movie.durationInMinutes} min</span>
+                    </div>
+                    <div className="meta-item">
+                      <FaGlobe className="icon" />
+                      <span className="language-tag">{movie.language}</span>
+                    </div>
                   </div>
                   <div className="movie-genres-list">
                     {movie.genre && movie.genre.split(',').map((genre, idx) => (
                       <span key={idx} className="movie-genre-tag">
-                        {genre.trim()}{idx < movie.genre.split(',').length - 1 ? ' • ' : ''}
+                        {genre.trim()}
                       </span>
                     ))}
                   </div>

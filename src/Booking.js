@@ -286,11 +286,6 @@ function Booking() {
       const token = localStorage.getItem('token');
       const userId = localStorage.getItem('userId');
 
-      console.log('Starting reservation process...');
-      console.log('User ID from localStorage:', userId);
-      console.log('Selected seats:', selectedSeats);
-      console.log('Selected showtime:', selectedTime);
-
       if (!userId) {
         throw new Error('User ID not found. Please login again.');
       }
@@ -300,18 +295,15 @@ function Booking() {
         authToken = `Bearer ${authToken}`;
       }
 
-      console.log('Creating reservation with userId:', userId);
-
       // Create reservations for all selected seats
-      const reservationPromises = selectedSeats.map(seat => {
+      const reservationPromises = selectedSeats.map(async seat => {
         const reservationData = {
           showtimeId: selectedTime.id,
           userId: userId,
           seatId: seat.id
         };
-        console.log('Creating reservation with data:', reservationData);
         
-        return fetch(`${API_URL}/api/reserve`, {
+        const response = await fetch(`${API_URL}/api/reserve`, {
           method: 'POST',
           headers: {
             'Authorization': authToken,
@@ -319,70 +311,64 @@ function Booking() {
           },
           body: JSON.stringify(reservationData)
         });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to create reservation');
+        }
+
+        return response.json();
       });
 
-      const results = await Promise.all(reservationPromises);
-      
-      // Check for failed reservations
-      const failedReservations = results.filter(r => !r.ok);
-      if (failedReservations.length > 0) {
-        const errorResponse = await failedReservations[0].json();
-        console.error('Reservation failed:', errorResponse);
-        
-        if (failedReservations[0].status === 401) {
-          console.log('Authentication error, clearing user data...');
-          localStorage.removeItem('token');
-          localStorage.removeItem('isAuthenticated');
-          localStorage.removeItem('userId');
-          localStorage.setItem('bookingState', JSON.stringify({
-            movie,
-            selectedSeats,
-            selectedTime,
-            totalPrice,
-            returnUrl: '/booking'
-          }));
-          
-          navigate('/login', { state: { from: '/booking' } });
-          return;
-        }
-        throw new Error(errorResponse.error || errorResponse.message || 'Failed to reserve some seats');
-      }
+      const reservationResults = await Promise.all(reservationPromises);
 
-      console.log('All reservations successful, navigating to payment...');
+      // Check for failed reservations
+      if (reservationResults.some(result => !result || result.error)) {
+        throw new Error('Failed to create some reservations');
+      }
 
       // Calculate total price including booking fee
       const bookingFee = 1.50;
       const totalPriceWithFee = totalPrice + bookingFee;
 
-      // If all reservations are successful, navigate to payment with complete booking details
-      navigate('/payment', { 
-        state: { 
-          bookingDetails: {
-            movie: {
-              ...movie,
-              image: movie.image // Ensure image path is included
-            },
-            seats: selectedSeats.map(seat => ({
-              id: seat.id,
-              rowNumber: seat.rowNumber,
-              seatNumber: seat.seatNumber
-            })),
-            showtime: {
-              id: selectedTime.id,
-              startTime: selectedTime.startTime,
-              price: selectedTime.price
-            },
-            totalPrice: totalPrice,
-            bookingFee: bookingFee,
-            finalTotal: totalPriceWithFee,
-            reservationTime: new Date().toISOString()
-          }
-        } 
-      });
+      // Map the seats with their reservation IDs
+      const seatsWithReservations = selectedSeats.map((seat, index) => ({
+        ...seat,
+        reservationId: reservationResults[index].id
+      }));
+
+      // Prepare booking details
+      const paymentState = {
+        bookingDetails: {
+          movie: {
+            ...movie,
+            image: movie.image
+          },
+          seats: seatsWithReservations,
+          showtime: {
+            id: selectedTime.id,
+            startTime: selectedTime.startTime,
+            price: selectedTime.price
+          },
+          totalPrice: totalPrice,
+          bookingFee: bookingFee,
+          finalTotal: totalPriceWithFee,
+          reservationTime: new Date().toISOString()
+        }
+      };
+
+      // Save booking details to localStorage
+      localStorage.setItem('pendingPayment', JSON.stringify(paymentState));
+      
+      // Complete the reserving state
+      setIsReserving(false);
+
+      // Use window.location for hard navigation
+      window.location.href = '/payment';
+
     } catch (error) {
       console.error('Error creating reservations:', error);
       setError(error.message || 'Failed to reserve seats. Please try again.');
-    } finally {
       setIsReserving(false);
     }
   };
