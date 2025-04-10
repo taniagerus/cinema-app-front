@@ -248,98 +248,57 @@ function AdminDashboard() {
         className="admin-sidebar"
         initial={{ x: -280 }}
         animate={{ x: 0 }}
-        transition={{ type: "spring", stiffness: 100 }}
+        transition={{ type: 'spring', stiffness: 100 }}
       >
-        <div className="admin-logo">
-          <motion.h1
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.2 }}
-          >
-            CINEMATIX
-          </motion.h1>
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.3 }}
-          >
-            Admin Panel
-          </motion.p>
+        <div className="sidebar-header">
+          <h2>Admin Panel</h2>
         </div>
-
-        <div className="admin-navigation">
-          <motion.button
-            className={`nav-button ${activeTab === 'movies' ? 'active' : ''}`}
+        <nav className="sidebar-nav">
+          <button 
+            className={`nav-item ${activeTab === 'movies' ? 'active' : ''}`} 
             onClick={() => handleTabChange('movies')}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
           >
             <FiFilm />
-            Movies
-          </motion.button>
-
-          <motion.button
-            className={`nav-button ${activeTab === 'showtimes' ? 'active' : ''}`}
+            <span>Movies</span>
+          </button>
+          
+          <button 
+            className={`nav-item ${activeTab === 'showtimes' ? 'active' : ''}`} 
             onClick={() => handleTabChange('showtimes')}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
           >
-            <FiCalendar />
-            Showtimes
-          </motion.button>
-
-          <motion.button
-            className={`nav-button ${activeTab === 'halls' ? 'active' : ''}`}
+            <FiClock />
+            <span>Showtimes</span>
+          </button>
+          
+          <button 
+            className={`nav-item ${activeTab === 'halls' ? 'active' : ''}`} 
             onClick={() => handleTabChange('halls')}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
+          >
+            <FiGrid />
+            <span>Halls</span>
+          </button>
+
+          <button 
+            className="nav-item"
+            onClick={() => navigate('/admin/analytics')}
+          >
+            <FiDollarSign />
+            <span>Sales Analytics</span>
+          </button>
+          
+          <button 
+            className="nav-item"
+            onClick={() => navigate('/')}
           >
             <FiHome />
-            Halls
-          </motion.button>
-        </div>
-
-        <div className="admin-actions">
-          <motion.button
-            className="action-button"
-            onClick={handleAddMovie}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            <FiPlus />
-            Add Movie
-          </motion.button>
-
-          <motion.button
-            className="action-button"
-            onClick={handleAddShowtime}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            <FiPlus />
-            Add Showtime
-          </motion.button>
-
-          <motion.button
-            className="action-button"
-            onClick={handleAddHall}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            <FiHome />
-            Add Hall
-          </motion.button>
-        </div>
-
-        <motion.button
-          className="logout-button"
-          onClick={handleLogout}
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-        >
-          <FiLogOut />
-          Logout
-        </motion.button>
+            <span>Client Area</span>
+          </button>
+          
+          <button className="nav-item logout" onClick={handleLogout}>
+            <FiLogOut />
+            <span>Logout</span>
+          </button>
+        </nav>
       </motion.div>
 
       <div className="admin-main">
@@ -372,17 +331,55 @@ function AdminDashboard() {
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
             >
-              <motion.h1 
-                className="dashboard-title"
-                initial={{ y: -20 }}
-                animate={{ y: 0 }}
-              >
-                {activeTab === 'movies' ? 'Movies' : activeTab === 'showtimes' ? 'Showtimes' : 'Halls'}
-              </motion.h1>
+              <div className="section-header">
+                <motion.h1 
+                  className="dashboard-title"
+                  initial={{ y: -20 }}
+                  animate={{ y: 0 }}
+                >
+                  {activeTab === 'movies' ? 'Movies' : activeTab === 'showtimes' ? 'Showtimes' : 'Halls'}
+                </motion.h1>
+                
+                {activeTab === 'movies' && (
+                  <motion.button
+                    className="add-button"
+                    onClick={handleAddMovie}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <FiPlus />
+                    Add New Movie
+                  </motion.button>
+                )}
+                
+                {activeTab === 'showtimes' && (
+                  <motion.button
+                    className="add-button"
+                    onClick={handleAddShowtime}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <FiPlus />
+                    Add New Showtime
+                  </motion.button>
+                )}
+                
+                {activeTab === 'halls' && (
+                  <motion.button
+                    className="add-button"
+                    onClick={handleAddHall}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <FiPlus />
+                    Add New Hall
+                  </motion.button>
+                )}
+              </div>
 
               {activeTab === 'movies' ? (
                 <div className="movies-grid">
-                  {movies.map((movie, index) => (
+                  {movies.length > 0 ? movies.map((movie, index) => (
                     <motion.div
                       key={movie.id}
                       className="movie-card"
@@ -399,34 +396,31 @@ function AdminDashboard() {
                             e.target.onerror = null;
                             e.target.src = '/placeholder-movie.jpg';
                           }}
+                          style={{ objectFit: 'cover', width: '100%', height: '100%' }}
                         />
-                        <motion.div 
-                          className="movie-actions-overlay"
-                          initial={{ opacity: 0 }}
-                          whileHover={{ opacity: 1 }}
-                        >
+                        <div className="movie-actions-overlay">
                           <motion.button
                             className="edit-button"
                             onClick={() => navigate(`/admin/movie/edit/${movie.id}`)}
-                            whileHover={{ scale: 1.1 }}
-                            whileTap={{ scale: 0.9 }}
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
                           >
                             <FiEdit2 />
-                            Edit
                           </motion.button>
                           <motion.button
                             className="delete-button"
                             onClick={() => setDeleteConfirm({ type: 'movies', id: movie.id })}
-                            whileHover={{ scale: 1.1 }}
-                            whileTap={{ scale: 0.9 }}
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
                           >
                             <FiTrash2 />
-                            Delete
                           </motion.button>
-                        </motion.div>
+                        </div>
                       </div>
                       <div className="movie-details">
-                        <h3>{movie.title}</h3>
+                        <h3 title={movie.title}>
+                          {movie.title}
+                        </h3>
                         <div className="movie-meta">
                           <span className="movie-duration">
                             <FiClock />
@@ -434,13 +428,26 @@ function AdminDashboard() {
                           </span>
                           {movie.genre && (
                             <span className="movie-genre">
-                              {movie.genre.split(',')[0]}
+                              <span>{movie.genre.split(',')[0]}</span>
                             </span>
                           )}
                         </div>
                       </div>
                     </motion.div>
-                  ))}
+                  )) : (
+                    <div className="empty-state">
+                      <p>No movies available. Add your first movie!</p>
+                      <motion.button
+                        className="empty-state-button"
+                        onClick={handleAddMovie}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        <FiPlus />
+                        Add Movie
+                      </motion.button>
+                    </div>
+                  )}
                 </div>
               ) : activeTab === 'showtimes' ? (
                 <div className="showtimes-grid">

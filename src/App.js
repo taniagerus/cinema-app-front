@@ -13,6 +13,8 @@ import AdminDashboard from './AdminDashboard';
 import EditShowtime from './EditShowtime';
 import EditMovie from './EditMovie';
 import AdminHall from './AdminHall';
+import AdminAnalytics from './AdminAnalytics';
+import UserProfile from './components/UserProfile';
 
 function App() {
   return (
@@ -26,10 +28,12 @@ function App() {
           <Route path="/details" element={<ViewDetails />} />
           <Route path="/payment" element={<Payment />} />
           <Route path="/confirmation" element={<Confirmation />} />
+          <Route path="/profile" element={<UserProfile />} />
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/admin/showtime" element={<AdminShowtime />} />
           <Route path="/admin/movie" element={<AdminMovie />} />
           <Route path="/admin/hall" element={<AdminHall />} />
+          <Route path="/admin/analytics" element={<AdminAnalytics />} />
           <Route path="/admin/showtime/edit/:id" element={<EditShowtime />} />
           <Route path="/admin/movie/edit/:id" element={<EditMovie />} />
         </Routes>

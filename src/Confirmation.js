@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaCheck, FaDownload, FaHome, FaTicketAlt, FaCalendarAlt, FaClock, FaCouch, FaDollarSign, FaFilm, FaMapMarkerAlt } from 'react-icons/fa';
+import { FaCheck, FaDownload, FaHome, FaTicketAlt, FaCalendarAlt, FaClock, FaCouch, FaDollarSign, FaMapMarkerAlt } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
 import './Confirmation.css';
 
@@ -268,22 +268,10 @@ const Confirmation = () => {
           transition={{ duration: 0.5, delay: 0.4 }}
         >
           <div className="movie-info">
-            <div className="movie-poster-container">
-              <img
-                src={`${API_URL}${bookingDetails.movie.image}`}
-                alt={bookingDetails.movie.title}
-                className="movie-poster"
-                onError={(e) => {
-                  e.target.onerror = null;
-                  e.target.src = '/placeholder-movie.jpg';
-                }}
-              />
-              <div className="movie-age-rating">{bookingDetails.movie.ageRating || 'G'}</div>
-            </div>
             <div className="movie-details">
               <h2>{bookingDetails.movie.title}</h2>
               <div className="movie-meta">
-                <span className="movie-duration">{bookingDetails.movie.duration} min</span>
+                <span className="movie-duration">{bookingDetails.movie.duration || bookingDetails.movie.durationInMinutes} min</span>
                 <span className="movie-language">{bookingDetails.movie.language}</span>
               </div>
               

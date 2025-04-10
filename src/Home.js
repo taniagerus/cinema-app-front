@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import './Home.css';
 import { motion } from 'framer-motion';
-import { FiSearch, FiBell, FiChevronRight, FiUser, FiPlus, FiClock, FiCalendar, FiFilter } from 'react-icons/fi';
+import { FiSearch, FiBell, FiChevronRight, FiUser, FiPlus, FiClock, FiCalendar, FiFilter, FiSettings, FiLogOut } from 'react-icons/fi';
 import { FaStar, FaClock, FaGlobe } from 'react-icons/fa';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 
 const API_URL = 'http://localhost:5252';
 
@@ -405,6 +406,17 @@ function Home() {
             <FiSearch className="search-icon" />
           </motion.div>
           
+          {isAdmin && (
+            <motion.button 
+              className="admin-btn"
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => navigate('/admin')}
+            >
+              Admin Panel
+            </motion.button>
+          )}
+          
           <motion.button 
             className="filter-btn"
             whileHover={{ scale: 1.1 }}
@@ -422,44 +434,70 @@ function Home() {
             <FiBell />
           </motion.button>
           
-          <motion.div 
-            className="user-menu-container"
-            style={{ position: 'relative' }}
-          >
-            <motion.div 
-              className="user-avatar"
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={handleUserIconClick}
-            >
-              <FiUser />
-            </motion.div>
-            
-            {showUserMenu && (
+          {isAuthenticated ? (
+            <div className="user-section">
               <motion.div 
-                className="user-dropdown"
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.2 }}
+                className="user-menu-container"
+                initial={false}
+                animate={showUserMenu ? "open" : "closed"}
               >
-                {!isAuthenticated ? (
-                  <div className="dropdown-item" onClick={handleLoginClick}>
-                    Login
-                  </div>
-                ) : (
-                  <>
-                    <div className="dropdown-item user-role">
-                      {isAdmin ? 'Administrator' : 'User'}
-                    </div>
-                    <div className="dropdown-item" onClick={handleLogoutClick}>
-                      Logout
-                    </div>
-                  </>
+                <motion.button
+                  className="user-button"
+                  onClick={() => setShowUserMenu(!showUserMenu)}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <FiUser />
+                </motion.button>
+                
+                {showUserMenu && (
+                  <motion.div 
+                    className="user-menu"
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                  >
+                    <motion.div
+                      className="menu-item"
+                      whileHover={{ backgroundColor: 'rgba(255, 255, 255, 0.1)' }}
+                      onClick={() => {
+                        navigate('/profile');
+                        setShowUserMenu(false);
+                      }}
+                    >
+                      <FiUser />
+                      <span>Profile</span>
+                    </motion.div>
+                    {isAdmin && (
+                      <motion.div
+                        className="menu-item"
+                        whileHover={{ backgroundColor: 'rgba(255, 255, 255, 0.1)' }}
+                        onClick={() => {
+                          navigate('/admin');
+                          setShowUserMenu(false);
+                        }}
+                      >
+                        <FiSettings />
+                        <span>Admin Panel</span>
+                      </motion.div>
+                    )}
+                    <motion.div
+                      className="menu-item"
+                      whileHover={{ backgroundColor: 'rgba(255, 255, 255, 0.1)' }}
+                      onClick={handleLogoutClick}
+                    >
+                      <FiLogOut />
+                      <span>Logout</span>
+                    </motion.div>
+                  </motion.div>
                 )}
               </motion.div>
-            )}
-          </motion.div>
+            </div>
+          ) : (
+            <Link to="/login" className="login-button">
+              Login
+            </Link>
+          )}
         </div>
       </motion.nav>
 

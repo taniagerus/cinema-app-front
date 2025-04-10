@@ -158,28 +158,83 @@ function Payment() {
     }
   };
 
+  const validateCardNumber = (number) => {
+    const digits = number.replace(/\s/g, '');
+    if (!/^\d{16}$/.test(digits)) return false;
+    
+    // Luhn algorithm for card number validation
+    let sum = 0;
+    let isEven = false;
+    
+    // Loop through values starting from the rightmost digit
+    for (let i = digits.length - 1; i >= 0; i--) {
+      let digit = parseInt(digits[i]);
+
+      if (isEven) {
+        digit *= 2;
+        if (digit > 9) {
+          digit -= 9;
+        }
+      }
+
+      sum += digit;
+      isEven = !isEven;
+    }
+
+    return sum % 10 === 0;
+  };
+
+  const validateExpiry = (expiry) => {
+    if (!expiry.includes('/')) return false;
+    
+    const [month, year] = expiry.split('/');
+    const currentDate = new Date();
+    const currentYear = currentDate.getFullYear() % 100;
+    const currentMonth = currentDate.getMonth() + 1;
+    
+    const expiryMonth = parseInt(month);
+    const expiryYear = parseInt(year);
+    
+    if (expiryMonth < 1 || expiryMonth > 12) return false;
+    if (expiryYear < currentYear) return false;
+    if (expiryYear === currentYear && expiryMonth < currentMonth) return false;
+    
+    return true;
+  };
+
+  const validateCVC = (cvc) => {
+    return /^\d{3,4}$/.test(cvc);
+  };
+
   const validateForm = () => {
     const newErrors = {};
     
+    // Validate cardholder name
     if (!cardName.trim()) {
       newErrors.cardName = 'Enter cardholder name';
+    } else if (!/^[a-zA-Z\s]{2,}$/.test(cardName)) {
+      newErrors.cardName = 'Enter a valid name (letters only)';
     }
     
-    if (!cardNumber.trim() || cardNumber.replace(/\s/g, '').length < 16) {
-      newErrors.cardNumber = 'Enter valid card number';
+    // Validate card number using Luhn algorithm
+    if (!cardNumber.trim()) {
+      newErrors.cardNumber = 'Enter card number';
+    } else if (!validateCardNumber(cardNumber)) {
+      newErrors.cardNumber = 'Enter a valid card number';
     }
     
-    if (!cardExpiry.trim() || !cardExpiry.includes('/')) {
-      newErrors.cardExpiry = 'Enter valid date (MM/YY)';
-    } else {
-      const [month] = cardExpiry.split('/');
-      if (parseInt(month) < 1 || parseInt(month) > 12) {
-        newErrors.cardExpiry = 'Invalid month';
-      }
+    // Validate expiry date
+    if (!cardExpiry.trim()) {
+      newErrors.cardExpiry = 'Enter expiry date';
+    } else if (!validateExpiry(cardExpiry)) {
+      newErrors.cardExpiry = 'Enter a valid future date (MM/YY)';
     }
     
-    if (!cardCVC.trim() || cardCVC.length < 3) {
-      newErrors.cardCVC = 'Enter valid CVC code';
+    // Validate CVC
+    if (!cardCVC.trim()) {
+      newErrors.cardCVC = 'Enter CVC code';
+    } else if (!validateCVC(cardCVC)) {
+      newErrors.cardCVC = 'Enter a valid CVC code';
     }
     
     setErrors(newErrors);
@@ -198,6 +253,27 @@ function Payment() {
         authToken = `Bearer ${authToken}`;
       }
 
+      // First validate the card with the payment service
+      const cardValidationResponse = await fetch(`${API_URL}/api/payment/validate-card`, {
+        method: 'POST',
+        headers: {
+          'Authorization': authToken,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          cardNumber: cardNumber.replace(/\s/g, ''),
+          expiryDate: cardExpiry,
+          cvc: cardCVC,
+          cardholderName: cardName
+        })
+      });
+
+      if (!cardValidationResponse.ok) {
+        const errorData = await cardValidationResponse.json();
+        throw new Error(errorData.error || 'Card validation failed');
+      }
+
+      // If card validation passes, process the payment
       const response = await fetch(`${API_URL}/api/payment/process`, {
         method: 'POST',
         headers: {
@@ -220,8 +296,7 @@ function Payment() {
         throw new Error(errorData.error || 'Payment processing failed');
       }
 
-      const paymentData = await response.json();
-      return paymentData;
+      return await response.json();
     } catch (error) {
       console.error('Payment processing error:', error);
       throw error;
@@ -398,39 +473,37 @@ function Payment() {
     setPaymentError('');
     
     try {
-    if (!validateForm()) {
+      if (!validateForm()) {
         setIsProcessing(false);
-      return;
-    }
+        return;
+      }
     
       const bookingDetails = JSON.parse(localStorage.getItem('pendingPayment'))?.bookingDetails;
       if (!bookingDetails) {
         throw new Error('Booking details not found');
       }
 
-      console.log('Початок процесу оплати з деталями бронювання:', bookingDetails);
+      console.log('Starting payment process with booking details:', bookingDetails);
 
-      // Обробляємо кожне місце послідовно
+      // Process each seat
       const results = [];
       for (const seat of bookingDetails.seats) {
         try {
-          console.log(`Обробка місця ${seat.seatNumber} в ряду ${seat.rowNumber}`);
+          console.log(`Processing seat ${seat.seatNumber} in row ${seat.rowNumber}`);
           
-          // Спочатку створюємо платіж
-          console.log(`Обробка оплати для бронювання ${seat.reservationId}`);
+          // Process payment
+          console.log(`Processing payment for reservation ${seat.reservationId}`);
           const paymentResponse = await processPayment(seat.reservationId, bookingDetails.showtime.price);
-          console.log(`Платіж оброблено:`, paymentResponse);
+          console.log(`Payment processed:`, paymentResponse);
 
-          // Потім створюємо або отримуємо квиток
-          console.log(`Створення/отримання квитка для бронювання ${seat.reservationId}`);
+          // Create or get ticket
+          console.log(`Creating/getting ticket for reservation ${seat.reservationId}`);
           const ticketResponse = await createOrGetTicket(seat.reservationId);
-          console.log(`Відповідь створення квитка:`, ticketResponse);
+          console.log(`Ticket response:`, ticketResponse);
 
           if (ticketResponse.id) {
-            // Оновлюємо статус квитка
             await updateTicketStatus(ticketResponse.id, 'Paid');
             
-            // Додаємо ID квитка до результатів
             results.push({
               ...seat,
               ticketId: ticketResponse.id,
@@ -438,7 +511,7 @@ function Payment() {
             });
           }
         } catch (error) {
-          console.error(`Помилка обробки місця ${seat.seatNumber}:`, error);
+          console.error(`Error processing seat ${seat.seatNumber}:`, error);
           results.push({
             ...seat,
             success: false,
@@ -447,14 +520,14 @@ function Payment() {
         }
       }
 
-      console.log('Всі результати обробки:', results);
+      console.log('All processing results:', results);
 
       const failures = results.filter(r => !r.success);
       if (failures.length > 0) {
         throw new Error(`Failed to process ${failures.length} tickets. Please contact support.`);
       }
 
-      // Оновлюємо дані бронювання з ID квитків
+      // Update booking details with ticket IDs
       const updatedBookingDetails = {
         ...bookingDetails,
         seats: results.map(result => ({
@@ -465,21 +538,17 @@ function Payment() {
         }))
       };
 
-      // Зберігаємо оновлені дані для сторінки підтвердження
       localStorage.setItem('bookingDetails', JSON.stringify(updatedBookingDetails));
-      
-      // Очищаємо дані очікуючого платежу
       localStorage.removeItem('pendingPayment');
       
       setIsPaymentComplete(true);
       setIsProcessing(false);
 
-      // Автоматично завантажуємо PDF-квитки
+      // Download PDF tickets
       try {
         for (const result of results) {
           if (result.success && result.ticketId) {
             await downloadTicketPdf(result.ticketId);
-            // Додаємо невелику затримку між завантаженнями
             await new Promise(resolve => setTimeout(resolve, 500));
           }
         }
@@ -487,11 +556,10 @@ function Payment() {
         console.error('Error downloading tickets:', error);
       }
 
-      // Використовуємо navigate замість window.location
       navigate('/confirmation', { replace: true });
 
     } catch (error) {
-      console.error('Помилка оплати або створення квитка:', error);
+      console.error('Payment or ticket creation error:', error);
       setPaymentError(error.message || 'Failed to process payment. Please try again.');
       setIsProcessing(false);
     }
@@ -506,7 +574,7 @@ function Payment() {
   };
 
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('uk-UA', {
+    return new Date(dateString).toLocaleDateString('en-US', {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
@@ -515,11 +583,17 @@ function Payment() {
   };
 
   const formatTime = (dateString) => {
-    return new Date(dateString).toLocaleTimeString('uk-UA', {
+    return new Date(dateString).toLocaleTimeString('en-US', {
       hour: '2-digit',
       minute: '2-digit',
-      hour12: false
+      hour12: true
     });
+  };
+
+  // Calculate total price without fee
+  const calculateTotalPrice = (bookingDetails) => {
+    if (!bookingDetails) return 0;
+    return bookingDetails.totalPrice || 0;
   };
 
   return (
@@ -553,15 +627,6 @@ function Payment() {
             >
               <h3>Order Details</h3>
               <div className="movie-summary">
-                <img 
-                  src={`${API_URL}${bookingDetails.movie.image}`} 
-                  alt={bookingDetails.movie.title} 
-                  className="movie-thumbnail"
-                  onError={(e) => {
-                    e.target.onerror = null;
-                    e.target.src = '/placeholder-movie.jpg';
-                  }}
-                />
                 <div className="movie-details">
                   <h4>{bookingDetails.movie.title}</h4>
                   <p>Date: {formatDate(bookingDetails.showtime.startTime)}</p>
@@ -571,17 +636,9 @@ function Payment() {
               </div>
               
               <div className="price-summary">
-                <div className="price-item">
-                  <span>Tickets ({bookingDetails?.seats?.length || 0})</span>
-                  <span>${(bookingDetails?.totalPrice || 0).toFixed(2)}</span>
-                </div>
-                <div className="price-item">
-                  <span>Service Fee</span>
-                  <span>${(bookingDetails?.bookingFee || 0).toFixed(2)}</span>
-                </div>
                 <div className="price-item total">
                   <span>Total Amount</span>
-                  <span>${(bookingDetails?.finalTotal || 0).toFixed(2)}</span>
+                  <span>${calculateTotalPrice(bookingDetails).toFixed(2)}</span>
                 </div>
               </div>
             </motion.div>
@@ -637,7 +694,7 @@ function Payment() {
                 <div className="form-group">
                   <label>
                     <FiCreditCard className="input-icon" />
-                    <span>Номер картки</span>
+                    <span>Card Number</span>
                   </label>
                   <input 
                     type="text" 
@@ -654,7 +711,7 @@ function Payment() {
                   <div className="form-group">
                     <label>
                       <FiCalendar className="input-icon" />
-                      <span>Термін дії</span>
+                      <span>Expiry Date</span>
                     </label>
                     <input 
                       type="text" 
@@ -703,7 +760,7 @@ function Payment() {
                     whileTap={{ scale: 0.95 }}
                     disabled={isProcessing}
                   >
-                    {isProcessing ? 'PROCESSING...' : `PAY $${(bookingDetails?.finalTotal || 0).toFixed(2)}`}
+                    {isProcessing ? 'PROCESSING...' : `PAY $${calculateTotalPrice(bookingDetails).toFixed(2)}`}
                   </motion.button>
                 </div>
               </motion.form>

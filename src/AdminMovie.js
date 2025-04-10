@@ -6,6 +6,37 @@ import './AdminMovie.css';
 
 const API_URL = 'http://localhost:5252';
 
+// Add these utility functions after the imports
+const calculateEndTime = (startTime, durationInMinutes) => {
+  const start = new Date(startTime);
+  const end = new Date(start.getTime() + durationInMinutes * 60000);
+  return end;
+};
+
+const formatTime = (date) => {
+  return date.toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true
+  });
+};
+
+const formatDate = (date) => {
+  return date.toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric'
+  });
+};
+
+const isSameDay = (date1, date2) => {
+  return (
+    date1.getDate() === date2.getDate() &&
+    date1.getMonth() === date2.getMonth() &&
+    date1.getFullYear() === date2.getFullYear()
+  );
+};
+
 function AdminMovie() {
   const navigate = useNavigate();
 
@@ -39,6 +70,9 @@ function AdminMovie() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [uploadProgress, setUploadProgress] = useState('');
+
+  const [showEndTime, setShowEndTime] = useState('');
+  const [showEndDate, setShowEndDate] = useState('');
 
   // Доступні вікові рейтинги
   const ageRatings = ['0', '6', '10', '12', '16','18'];
@@ -93,6 +127,27 @@ function AdminMovie() {
     }
   };
 
+  // Add this function to handle duration changes
+  const handleDurationChange = (e) => {
+    const duration = e.target.value;
+    setFormData(prev => ({
+      ...prev,
+      durationInMinutes: duration
+    }));
+
+    // Calculate example end time using current time as start
+    const now = new Date();
+    const endTime = calculateEndTime(now, parseInt(duration) || 0);
+    
+    if (!isSameDay(now, endTime)) {
+      setShowEndTime(`${formatTime(endTime)} (next day)`);
+      setShowEndDate(formatDate(endTime));
+    } else {
+      setShowEndTime(formatTime(endTime));
+      setShowEndDate('');
+    }
+  };
+
   // Оновлена версія handleSubmit згідно з контролером
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -116,6 +171,17 @@ function AdminMovie() {
     const duration = parseInt(formData.durationInMinutes);
     if (isNaN(duration) || duration < 1 || duration > 1000) {
       setError('Тривалість фільму повинна бути від 1 до 1000 хвилин');
+      setIsLoading(false);
+      return;
+    }
+
+    // Example end time check
+    const now = new Date();
+    const endTime = calculateEndTime(now, duration);
+    const durationInHours = duration / 60;
+    
+    if (durationInHours > 4) {
+      setError('Тривалість фільму не може перевищувати 4 години');
       setIsLoading(false);
       return;
     }
@@ -232,11 +298,21 @@ function AdminMovie() {
                 type="number"
                 name="durationInMinutes"
                 min="1"
+                max="240"
                 value={formData.durationInMinutes}
-                onChange={handleInputChange}
+                onChange={handleDurationChange}
                 required
                 className="admin-input"
               />
+              {formData.durationInMinutes && (
+                <div className="duration-info">
+                  <small>
+                    Example: If movie starts at {formatTime(new Date())},
+                    it will end at {showEndTime}
+                    {showEndDate && <span> on {showEndDate}</span>}
+                  </small>
+                </div>
+              )}
             </div>
           </div>
 

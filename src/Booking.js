@@ -4,6 +4,21 @@ import { FiArrowLeft, FiCalendar, FiClock, FiMonitor, FiUser, FiGlobe, FiChevron
 import { useNavigate, useLocation } from 'react-router-dom';
 import './Booking.css';
 
+// Add these utility functions at the top
+const calculateEndTime = (startTime, durationInMinutes) => {
+  const start = new Date(startTime);
+  const end = new Date(start.getTime() + durationInMinutes * 60000);
+  return end;
+};
+
+const formatTime = (date) => {
+  return new Date(date).toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true
+  });
+};
+
 function Booking() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -25,6 +40,8 @@ function Booking() {
   const [hallData, setHallData] = useState(null);
   const [reservations, setReservations] = useState([]);
   const [isReserving, setIsReserving] = useState(false);
+  const [allMovieShowtimes, setAllMovieShowtimes] = useState([]);
+  const [otherMovies, setOtherMovies] = useState([]);
   
   // Current date
   const today = new Date();
@@ -102,9 +119,7 @@ function Booking() {
 
   // Fetch showtimes
   useEffect(() => {
-    const fetchShowtimes = async () => {
-      if (!movie) return;
-      
+    const fetchAllShowtimes = async () => {
       try {
         setIsLoading(true);
         const token = localStorage.getItem('token');
@@ -113,7 +128,8 @@ function Booking() {
           authToken = `Bearer ${authToken}`;
         }
 
-        const response = await fetch(`${API_URL}/api/showtimes?movieId=${movie.id}`, {
+        // Fetch all showtimes
+        const response = await fetch(`${API_URL}/api/showtimes`, {
           headers: {
             'Authorization': authToken,
             'Content-Type': 'application/json'
@@ -126,12 +142,35 @@ function Booking() {
         
         const data = await response.json();
         
-        // Sort showtimes by date and time
-        const sortedShowtimes = data.sort((a, b) => 
-          new Date(a.startTime) - new Date(b.startTime)
-        );
+        // Fetch all movies to get their details
+        const moviesResponse = await fetch(`${API_URL}/api/movies`, {
+          headers: {
+            'Authorization': authToken,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (!moviesResponse.ok) {
+          throw new Error('Failed to fetch movies');
+        }
+
+        const moviesData = await moviesResponse.json();
+        const moviesMap = new Map(moviesData.map(m => [m.id, m]));
         
-        setShowtimes(sortedShowtimes);
+        // Organize showtimes by date and add movie details
+        const enhancedShowtimes = data.map(showtime => ({
+          ...showtime,
+          movie: moviesMap.get(showtime.movieId),
+          endTime: calculateEndTime(showtime.startTime, moviesMap.get(showtime.movieId)?.durationInMinutes || 0)
+        })).sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
+
+        // Split into current movie and other movies' showtimes
+        const currentMovieShowtimes = enhancedShowtimes.filter(st => st.movieId === movie.id);
+        const otherMoviesShowtimes = enhancedShowtimes.filter(st => st.movieId !== movie.id);
+        
+        setShowtimes(currentMovieShowtimes);
+        setAllMovieShowtimes(enhancedShowtimes);
+        setOtherMovies(Array.from(new Set(otherMoviesShowtimes.map(st => st.movie))));
         
         if (selectedShowtime) {
           setSelectedTime(selectedShowtime);
@@ -144,7 +183,7 @@ function Booking() {
       }
     };
     
-    fetchShowtimes();
+    fetchAllShowtimes();
   }, [movie, selectedShowtime, API_URL]);
 
   // Extract unique dates
@@ -170,7 +209,8 @@ function Booking() {
           authToken = `Bearer ${authToken}`;
         }
 
-        const response = await fetch(`${API_URL}/api/reserve`, {
+        // Use the specific endpoint for getting reserved seats
+        const response = await fetch(`${API_URL}/api/reserve/showtime/${selectedTime.id}/seats`, {
           headers: {
             'Authorization': authToken,
             'Content-Type': 'application/json'
@@ -179,7 +219,6 @@ function Booking() {
 
         if (!response.ok) {
           if (response.status === 401) {
-            // Handle unauthorized error
             localStorage.removeItem('token');
             localStorage.removeItem('isAuthenticated');
             navigate('/login', { state: { from: '/booking' } });
@@ -188,10 +227,17 @@ function Booking() {
           throw new Error('Failed to fetch reservations');
         }
 
-        const data = await response.json();
-        // Filter reservations for current showtime
-        const currentShowtimeReservations = data.filter(r => r.showtimeId === selectedTime.id);
-        setReservations(currentShowtimeReservations);
+        const reservedSeatIds = await response.json();
+        // Update seats with reservation status
+        if (seats.length > 0) {
+          const updatedSeats = seats.map(row =>
+            row.map(seat => ({
+              ...seat,
+              isReserved: reservedSeatIds.includes(seat.id)
+            }))
+          );
+          setSeats(updatedSeats);
+        }
       } catch (error) {
         console.error('Error fetching reservations:', error);
         setError('Failed to load seat reservations');
@@ -199,7 +245,7 @@ function Booking() {
     };
 
     fetchReservations();
-  }, [selectedTime, API_URL, navigate]);
+  }, [selectedTime, API_URL, navigate, seats]);
 
   // Update seat availability based on reservations
   useEffect(() => {
@@ -253,8 +299,11 @@ function Booking() {
   }
   
   const handleSeatClick = (seat) => {
-    // Don't allow clicking on unavailable or reserved seats
-    if (seat.isReserved || (seat.isAvailable === false)) return;
+    // Don't allow clicking on reserved seats
+    if (seat.isReserved) {
+      setError('This seat is already reserved');
+      return;
+    }
     
     const isSeatSelected = selectedSeats.some(s => s.id === seat.id);
     
@@ -265,6 +314,7 @@ function Booking() {
       setSelectedSeats([...selectedSeats, seat]);
       setTotalPrice(prevPrice => prevPrice + selectedTime.price);
     }
+    setError(''); // Clear any previous errors
   };
   
   const handleTimeClick = (time) => {
@@ -379,6 +429,67 @@ function Booking() {
   
   const isSeatSelected = (seat) => {
     return selectedSeats.some(s => s.id === seat.id);
+  };
+
+  // Update the time slots rendering in the return statement
+  const renderTimeSlots = () => {
+    if (!selectedDate) return null;
+
+    const dateShowtimes = allMovieShowtimes.filter(showtime => 
+      new Date(showtime.startTime).toLocaleDateString('en-US') === selectedDate
+    );
+
+    if (dateShowtimes.length === 0) {
+      return (
+        <div className="no-showtimes-message">
+          <div className="message-content">
+            <span className="message-title">No sessions available</span>
+            <span className="message-subtitle">Please select another date to see available showtimes</span>
+          </div>
+        </div>
+      );
+    }
+
+    // Group showtimes by movie
+    const movieGroups = {};
+    dateShowtimes.forEach(showtime => {
+      if (!movieGroups[showtime.movieId]) {
+        movieGroups[showtime.movieId] = [];
+      }
+      movieGroups[showtime.movieId].push(showtime);
+    });
+
+    return Object.entries(movieGroups).map(([movieId, movieShowtimes]) => {
+      const movieData = movieShowtimes[0].movie;
+      const isCurrentMovie = movieId === movie.id.toString();
+
+      return (
+        <div key={movieId} className={`movie-showtime-group ${isCurrentMovie ? 'current-movie' : 'other-movie'}`}>
+          <div className="time-slots">
+            {movieShowtimes.map(showtime => (
+              <motion.button
+                key={showtime.id}
+                className={`time-slot ${selectedTime?.id === showtime.id ? 'active' : ''}`}
+                onClick={() => handleTimeClick(showtime)}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                disabled={new Date(showtime.startTime) < new Date()}
+              >
+                <div className="time-slot-time">
+                  {formatTime(showtime.startTime)}
+                </div>
+                <div className="time-slot-end">
+                  Ends {formatTime(showtime.endTime)}
+                </div>
+                <div className="time-slot-price">
+                  ${showtime.price}
+                </div>
+              </motion.button>
+            ))}
+          </div>
+        </div>
+      );
+    });
   };
 
   return (
@@ -535,44 +646,8 @@ function Booking() {
               ) : error ? (
                 <div className="error-message">{error}</div>
               ) : (
-                <div className="time-slots">
-                  {(() => {
-                    const availableShowtimes = showtimes.filter(showtime => 
-                      new Date(showtime.startTime).toLocaleDateString('en-US') === selectedDate
-                    );
-                    
-                    if (availableShowtimes.length === 0) {
-                      return (
-                        <div className="no-showtimes-message">
-                          <div className="message-content">
-                            <span className="message-title">
-                              No sessions available
-                            </span>
-                            <span className="message-subtitle">
-                              Please select another date to see available showtimes
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    }
-
-                    return availableShowtimes.map(showtime => (
-                      <motion.button
-                        key={showtime.id}
-                        className={`time-slot ${selectedTime?.id === showtime.id ? 'active' : ''}`}
-                        onClick={() => handleTimeClick(showtime)}
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                      >
-                        <div className="time-slot-time">
-                          {formatTime(showtime.startTime)}
-                        </div>
-                        <div className="time-slot-price">
-                          ${showtime.price}
-                        </div>
-                      </motion.button>
-                    ));
-                  })()}
+                <div className="all-showtimes-container">
+                  {renderTimeSlots()}
                 </div>
               )}
             </motion.div>

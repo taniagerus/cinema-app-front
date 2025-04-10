@@ -143,33 +143,75 @@ body {
   font-weight: 500;
 }
 
+.user-section {
+  position: relative;
+}
+
 .user-menu-container {
   position: relative;
 }
 
-.user-dropdown {
+.user-button {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background-color 0.2s;
+}
+
+.user-button:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.user-menu {
   position: absolute;
   top: 100%;
   right: 0;
   background-color: var(--background-light);
   border-radius: 8px;
   padding: 0.5rem;
-  min-width: 150px;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+  min-width: 200px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   z-index: 1000;
 }
 
-.dropdown-item {
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
   padding: 0.8rem 1rem;
-  color: var(--text-color);
-  font-size: 0.9rem;
+  color: white;
   cursor: pointer;
-  border-radius: 4px;
-  transition: background-color var(--transition-speed);
+  border-radius: 6px;
+  transition: background-color 0.2s;
 }
 
-.dropdown-item:hover {
-  background-color: rgba(255, 255, 255, 0.1);
+.menu-item svg {
+  font-size: 1.2rem;
+  color: var(--primary-color);
+}
+
+.menu-item span {
+  font-size: 0.9rem;
+}
+
+.login-button {
+  color: white;
+  text-decoration: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  background-color: var(--primary-color);
+  transition: background-color 0.2s;
+}
+
+.login-button:hover {
+  background-color: var(--primary-color-dark);
 }
 
 .user-role {
